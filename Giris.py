@@ -3,7 +3,6 @@ import time
 from win10toast import ToastNotifier
 
 toaster = ToastNotifier()
-
 en_son_okunan_mesaj = ""
 
 with sync_playwright() as p:
@@ -16,26 +15,27 @@ with sync_playwright() as p:
         
         # BİLGİLERİNİ GİRMEYİ UNUTMA
         page.fill("input[name='username']", "@ogr.eskisehir.edu.tr")
-        page.fill("input[name='password']", "sifreniz")
+        page.fill("input[name='password']", "")
         page.click("button[type='submit']")
-        page.wait_for_load_state("networkidle")
+        
+        # networkidle tuzağını sildik, sadece iskeletin yüklenmesini bekliyoruz
+        page.wait_for_load_state("domcontentloaded")
         print("Giriş Başarılı, ana sayfanın oturması bekleniyor...")
         
         time.sleep(3)
         
-        
         print("Mesajlar sayfasına geçiliyor...")
         page.goto("https://obs.eskisehir.edu.tr/#/mesajlasma")
-        page.wait_for_load_state("networkidle")
         
     except Exception as e:
         print("Giriş Başarısız:", e)
 
     while True:
         try:
-            print("\n--- Sayfa tazeleniyor (F5 atılıyor) ve kontrol ediliyor ---")
+            print("\n--- Mesajlar sayfası taranıyor ---")
             
-            page.reload(wait_until="networkidle")
+            # F5 (reload) yerine direkt adrese gitmesini söylüyoruz, en garantisi bu
+            page.goto("https://obs.eskisehir.edu.tr/#/mesajlasma", wait_until="domcontentloaded")
             
             page.wait_for_selector("div[ng-click='konununMesajiniGetir(konu);']", timeout=15000)
 
@@ -50,7 +50,6 @@ with sync_playwright() as p:
                 
                 bildirim_metni = f"{gonderen}\n{konu}"
                 
-                # Hafıza kontrolü
                 if bildirim_metni != en_son_okunan_mesaj:
                     print(f"-> YENİ MESAJ YAKALANDI: {bildirim_metni}")
                     toaster.show_toast("ESTÜ OBS YENİ MESAJ", bildirim_metni, duration=7, threaded=True)
@@ -58,13 +57,12 @@ with sync_playwright() as p:
                 else:
                     print("Yeni mesaj yok.")
             
-            bekleme_suresi = 300 # 5 dakika
+            bekleme_suresi = 300 
 
         except Exception as e:
             print("Pürüz çıktı (Oturum düşmüş olabilir):", e)
             bekleme_suresi = 60 
 
-        # GERİ SAYIM DÖNGÜSÜ
         print(f"Sonraki kontrol için bekleniyor...")
         try:
             for kalan in range(bekleme_suresi, 0, -1):
